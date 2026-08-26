@@ -307,7 +307,7 @@ function CategoryBreakdown({ entries }: { entries: Entry[] }) {
 
 function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: string) => void }) {
   const [kind, setKind] = useState<Kind>("variable");
-  const [category, setCategory] = useState(CATEGORIES.variable[0]);
+  const [category, setCategory] = useState<string>(CATEGORIES.variable[0]!);
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState("");
@@ -316,7 +316,7 @@ function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: st
 
   function changeKind(k: Kind) {
     setKind(k);
-    setCategory(CATEGORIES[k][0]);
+    setCategory(CATEGORIES[k][0]!);
   }
 
   async function submit(e: React.FormEvent) {
