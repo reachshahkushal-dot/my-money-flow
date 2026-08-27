@@ -373,18 +373,72 @@ function CategoryBreakdown({ entries }: { entries: Entry[] }) {
   );
 }
 
-function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: string) => void }) {
+const NO_ACCOUNT = "__none__";
+
+function AddEntryForm({
+  userId,
+  accounts,
+  entries,
+  onAdded,
+}: {
+  userId: string;
+  accounts: Account[];
+  entries: Entry[];
+  onAdded: (month: string) => void;
+}) {
   const [kind, setKind] = useState<Kind>("variable");
   const [category, setCategory] = useState<string>(CATEGORIES.variable[0]!);
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState("");
+  const [description, setDescription] = useState("");
+  const [accountId, setAccountId] = useState<string>(NO_ACCOUNT);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function changeKind(k: Kind) {
     setKind(k);
     setCategory(CATEGORIES[k][0]!);
+  }
+
+  function isLikelyDuplicate(value: number) {
+    const cutoff = Date.now() - 10 * 60 * 1000;
+    return entries.some(
+      (e) =>
+        e.entry_date === date &&
+        Number(e.amount) === value &&
+        e.category === category &&
+        (e.description ?? "") === description.trim() &&
+        new Date(e.created_at).getTime() > cutoff,
+    );
+  }
+
+  async function save(value: number) {
+    setSaving(true);
+    const { error: insertError } = await supabase.from("entries").insert({
+      user_id: userId,
+      kind,
+      category,
+      amount: value,
+      entry_date: date,
+      note: note.trim() || null,
+      description: description.trim() || null,
+      account_id: accountId === NO_ACCOUNT ? null : accountId,
+      source: "manual",
+      status: "confirmed",
+      currency: "SGD",
+    });
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setAmount("");
+    setNote("");
+    setDescription("");
+    setDuplicateWarning(false);
+    onAdded(monthKey(date));
   }
 
   async function submit(e: React.FormEvent) {
@@ -395,23 +449,11 @@ function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: st
       setError("Enter an amount greater than zero.");
       return;
     }
-    setSaving(true);
-    const { error: insertError } = await supabase.from("entries").insert({
-      user_id: userId,
-      kind,
-      category,
-      amount: value,
-      entry_date: date,
-      note: note.trim() || null,
-    });
-    setSaving(false);
-    if (insertError) {
-      setError(insertError.message);
+    if (!duplicateWarning && isLikelyDuplicate(value)) {
+      setDuplicateWarning(true);
       return;
     }
-    setAmount("");
-    setNote("");
-    onAdded(monthKey(date));
+    await save(value);
   }
 
   return (
