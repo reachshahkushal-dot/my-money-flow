@@ -209,7 +209,12 @@ function Dashboard() {
       </section>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[380px_1fr]">
-        <AddEntryForm userId={userId} onAdded={(m) => { setMonth(m); queryClient.invalidateQueries({ queryKey: ["entries", userId] }); }} />
+        <AddEntryForm
+          userId={userId}
+          accounts={accounts}
+          entries={entries}
+          onAdded={(m) => { setMonth(m); queryClient.invalidateQueries({ queryKey: ["entries", userId] }); }}
+        />
 
         <div className="space-y-8">
           {trend.length > 1 && (
