@@ -97,6 +97,26 @@ function Dashboard() {
     },
   });
 
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["accounts", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Account[];
+    },
+  });
+
+  const accountName = useMemo(
+    () => Object.fromEntries(accounts.map((a) => [a.id, a.account_name])) as Record<string, string>,
+    [accounts],
+  );
+  const [editing, setEditing] = useState<Entry | null>(null);
+
+
   const months = useMemo(() => {
     const set = new Set<string>([monthKey(new Date())]);
     entries.forEach((e) => set.add(monthKey(e.entry_date)));
