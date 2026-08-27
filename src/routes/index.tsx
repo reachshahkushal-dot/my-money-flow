@@ -172,6 +172,16 @@ function Dashboard() {
               ))}
             </SelectContent>
           </Select>
+          <AccountsDialog
+            userId={userId}
+            accounts={accounts}
+            trigger={
+              <Button variant="outline" size="sm">
+                <Wallet className="mr-1 size-4" />
+                Accounts
+              </Button>
+            }
+          />
           <Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => supabase.auth.signOut()}>
             <LogOut className="size-4" />
           </Button>
