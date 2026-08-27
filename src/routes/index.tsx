@@ -302,6 +302,15 @@ function Dashboard() {
           </section>
         </div>
       </div>
+
+      {editing && (
+        <EditEntryDialog
+          entry={editing}
+          accounts={accounts}
+          userId={userId}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </main>
   );
 }
