@@ -510,13 +510,71 @@ function AddEntryForm({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="description">Description / merchant (optional)</Label>
+          <Input
+            id="description"
+            placeholder="e.g. Annalakshmi"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Account (optional)</Label>
+          <Select value={accountId} onValueChange={setAccountId}>
+            <SelectTrigger>
+              <SelectValue placeholder="No account" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_ACCOUNT}>No account</SelectItem>
+              {accounts
+                .filter((a) => a.is_active)
+                .map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.account_name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="note">Note (optional)</Label>
           <Input id="note" placeholder="e.g. Koufu lunch" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <Button type="submit" className="w-full" disabled={saving}>
+        {duplicateWarning && (
+          <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
+            <p className="font-medium">Possible duplicate transaction</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              You logged the same date, amount, category and description a few minutes ago.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setDuplicateWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="flex-1"
+                disabled={saving}
+                onClick={() => save(Number(amount))}
+              >
+                Add anyway
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <Button type="submit" className="w-full" disabled={saving || duplicateWarning}>
           <Plus className="mr-1 size-4" />
           Add {KIND_LABELS[kind].toLowerCase()}
         </Button>
