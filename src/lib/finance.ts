@@ -1,14 +1,59 @@
 export type Kind = "income" | "fixed" | "variable" | "investment";
 
+export type Source = "manual" | "imported" | "system";
+export type Status = "confirmed" | "pending" | "needs_review";
+export type AccountType = "bank" | "cash" | "credit_card" | "other";
+
 export type Entry = {
   id: string;
   user_id: string;
   kind: Kind;
   category: string;
   note: string | null;
+  description: string | null;
   amount: number;
   entry_date: string;
   created_at: string;
+  updated_at: string;
+  source: Source;
+  status: Status;
+  account_id: string | null;
+  currency: string;
+  external_transaction_id: string | null;
+  is_shared: boolean;
+  shared_reference: string | null;
+};
+
+export type Account = {
+  id: string;
+  user_id: string;
+  account_name: string;
+  institution: string | null;
+  account_type: AccountType;
+  currency: string;
+  opening_balance: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export const SOURCE_LABELS: Record<Source, string> = {
+  manual: "Manual",
+  imported: "Imported",
+  system: "System",
+};
+
+export const STATUS_LABELS: Record<Status, string> = {
+  confirmed: "Confirmed",
+  pending: "Pending",
+  needs_review: "Needs review",
+};
+
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  bank: "Bank account",
+  cash: "Cash",
+  credit_card: "Credit card",
+  other: "Other",
 };
 
 export const KIND_LABELS: Record<Kind, string> = {

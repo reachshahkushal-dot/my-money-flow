@@ -14,38 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
-      entries: {
+      accounts: {
         Row: {
-          amount: number
-          category: string
+          account_name: string
+          account_type: string
           created_at: string
-          entry_date: string
+          currency: string
           id: string
-          kind: string
-          note: string | null
+          institution: string | null
+          is_active: boolean
+          opening_balance: number
+          updated_at: string
           user_id: string
         }
         Insert: {
-          amount: number
-          category: string
+          account_name: string
+          account_type?: string
           created_at?: string
-          entry_date?: string
+          currency?: string
           id?: string
-          kind: string
-          note?: string | null
+          institution?: string | null
+          is_active?: boolean
+          opening_balance?: number
+          updated_at?: string
           user_id: string
         }
         Update: {
-          amount?: number
-          category?: string
+          account_name?: string
+          account_type?: string
           created_at?: string
-          entry_date?: string
+          currency?: string
           id?: string
-          kind?: string
-          note?: string | null
+          institution?: string | null
+          is_active?: boolean
+          opening_balance?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      entries: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category: string
+          created_at: string
+          currency: string
+          description: string | null
+          entry_date: string
+          external_transaction_id: string | null
+          id: string
+          is_shared: boolean
+          kind: string
+          note: string | null
+          shared_reference: string | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          entry_date?: string
+          external_transaction_id?: string | null
+          id?: string
+          is_shared?: boolean
+          kind: string
+          note?: string | null
+          shared_reference?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          entry_date?: string
+          external_transaction_id?: string | null
+          id?: string
+          is_shared?: boolean
+          kind?: string
+          note?: string | null
+          shared_reference?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

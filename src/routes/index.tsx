@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, Plus, LogOut } from "lucide-react";
+import { Trash2, Plus, LogOut, Pencil, Wallet } from "lucide-react";
+import { AccountsDialog } from "@/components/AccountsDialog";
+import { EditEntryDialog } from "@/components/EditEntryDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +19,13 @@ import {
   CATEGORIES,
   KIND_LABELS,
   KIND_ORDER,
+  SOURCE_LABELS,
+  STATUS_LABELS,
   formatSGD,
   monthKey,
   monthLabel,
   summarize,
+  type Account,
   type Entry,
   type Kind,
 } from "@/lib/finance";
@@ -92,6 +97,26 @@ function Dashboard() {
     },
   });
 
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["accounts", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Account[];
+    },
+  });
+
+  const accountName = useMemo(
+    () => Object.fromEntries(accounts.map((a) => [a.id, a.account_name])) as Record<string, string>,
+    [accounts],
+  );
+  const [editing, setEditing] = useState<Entry | null>(null);
+
+
   const months = useMemo(() => {
     const set = new Set<string>([monthKey(new Date())]);
     entries.forEach((e) => set.add(monthKey(e.entry_date)));
@@ -147,6 +172,16 @@ function Dashboard() {
               ))}
             </SelectContent>
           </Select>
+          <AccountsDialog
+            userId={userId}
+            accounts={accounts}
+            trigger={
+              <Button variant="outline" size="sm">
+                <Wallet className="mr-1 size-4" />
+                Accounts
+              </Button>
+            }
+          />
           <Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => supabase.auth.signOut()}>
             <LogOut className="size-4" />
           </Button>
@@ -174,7 +209,12 @@ function Dashboard() {
       </section>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[380px_1fr]">
-        <AddEntryForm userId={userId} onAdded={(m) => { setMonth(m); queryClient.invalidateQueries({ queryKey: ["entries", userId] }); }} />
+        <AddEntryForm
+          userId={userId}
+          accounts={accounts}
+          entries={entries}
+          onAdded={(m) => { setMonth(m); queryClient.invalidateQueries({ queryKey: ["entries", userId] }); }}
+        />
 
         <div className="space-y-8">
           {trend.length > 1 && (
@@ -221,13 +261,32 @@ function Dashboard() {
                           day: "numeric",
                           month: "short",
                         })}
+                        {e.description ? ` · ${e.description}` : ""}
                         {e.note ? ` · ${e.note}` : ""}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground/70">
+                        {[
+                          KIND_LABELS[e.kind],
+                          e.account_id ? accountName[e.account_id] : null,
+                          SOURCE_LABELS[e.source] ?? e.source,
+                          STATUS_LABELS[e.status] ?? e.status,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                     <span className="text-sm font-semibold tabular-nums">
                       {e.kind === "income" ? "+" : "−"}
                       {formatSGD(Number(e.amount)).replace("SGD", "").trim()}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Edit entry"
+                      onClick={() => setEditing(e)}
+                    >
+                      <Pencil className="size-4 text-muted-foreground" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -243,6 +302,15 @@ function Dashboard() {
           </section>
         </div>
       </div>
+
+      {editing && (
+        <EditEntryDialog
+          entry={editing}
+          accounts={accounts}
+          userId={userId}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </main>
   );
 }
@@ -305,18 +373,72 @@ function CategoryBreakdown({ entries }: { entries: Entry[] }) {
   );
 }
 
-function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: string) => void }) {
+const NO_ACCOUNT = "__none__";
+
+function AddEntryForm({
+  userId,
+  accounts,
+  entries,
+  onAdded,
+}: {
+  userId: string;
+  accounts: Account[];
+  entries: Entry[];
+  onAdded: (month: string) => void;
+}) {
   const [kind, setKind] = useState<Kind>("variable");
   const [category, setCategory] = useState<string>(CATEGORIES.variable[0]!);
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState("");
+  const [description, setDescription] = useState("");
+  const [accountId, setAccountId] = useState<string>(NO_ACCOUNT);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function changeKind(k: Kind) {
     setKind(k);
     setCategory(CATEGORIES[k][0]!);
+  }
+
+  function isLikelyDuplicate(value: number) {
+    const cutoff = Date.now() - 10 * 60 * 1000;
+    return entries.some(
+      (e) =>
+        e.entry_date === date &&
+        Number(e.amount) === value &&
+        e.category === category &&
+        (e.description ?? "") === description.trim() &&
+        new Date(e.created_at).getTime() > cutoff,
+    );
+  }
+
+  async function save(value: number) {
+    setSaving(true);
+    const { error: insertError } = await supabase.from("entries").insert({
+      user_id: userId,
+      kind,
+      category,
+      amount: value,
+      entry_date: date,
+      note: note.trim() || null,
+      description: description.trim() || null,
+      account_id: accountId === NO_ACCOUNT ? null : accountId,
+      source: "manual",
+      status: "confirmed",
+      currency: "SGD",
+    });
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setAmount("");
+    setNote("");
+    setDescription("");
+    setDuplicateWarning(false);
+    onAdded(monthKey(date));
   }
 
   async function submit(e: React.FormEvent) {
@@ -327,23 +449,11 @@ function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: st
       setError("Enter an amount greater than zero.");
       return;
     }
-    setSaving(true);
-    const { error: insertError } = await supabase.from("entries").insert({
-      user_id: userId,
-      kind,
-      category,
-      amount: value,
-      entry_date: date,
-      note: note.trim() || null,
-    });
-    setSaving(false);
-    if (insertError) {
-      setError(insertError.message);
+    if (!duplicateWarning && isLikelyDuplicate(value)) {
+      setDuplicateWarning(true);
       return;
     }
-    setAmount("");
-    setNote("");
-    onAdded(monthKey(date));
+    await save(value);
   }
 
   return (
@@ -400,13 +510,71 @@ function AddEntryForm({ userId, onAdded }: { userId: string; onAdded: (month: st
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="description">Description / merchant (optional)</Label>
+          <Input
+            id="description"
+            placeholder="e.g. Annalakshmi"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Account (optional)</Label>
+          <Select value={accountId} onValueChange={setAccountId}>
+            <SelectTrigger>
+              <SelectValue placeholder="No account" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_ACCOUNT}>No account</SelectItem>
+              {accounts
+                .filter((a) => a.is_active)
+                .map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.account_name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="note">Note (optional)</Label>
           <Input id="note" placeholder="e.g. Koufu lunch" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <Button type="submit" className="w-full" disabled={saving}>
+        {duplicateWarning && (
+          <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
+            <p className="font-medium">Possible duplicate transaction</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              You logged the same date, amount, category and description a few minutes ago.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setDuplicateWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="flex-1"
+                disabled={saving}
+                onClick={() => save(Number(amount))}
+              >
+                Add anyway
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <Button type="submit" className="w-full" disabled={saving || duplicateWarning}>
           <Plus className="mr-1 size-4" />
           Add {KIND_LABELS[kind].toLowerCase()}
         </Button>
