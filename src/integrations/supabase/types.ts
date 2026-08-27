@@ -53,6 +53,59 @@ export type Database = {
         }
         Relationships: []
       }
+      debts: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          direction: string
+          id: string
+          note: string | null
+          original_transaction_id: string | null
+          person_name: string
+          remaining_amount: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          date?: string
+          direction?: string
+          id?: string
+          note?: string | null
+          original_transaction_id?: string | null
+          person_name: string
+          remaining_amount?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          direction?: string
+          id?: string
+          note?: string | null
+          original_transaction_id?: string | null
+          person_name?: string
+          remaining_amount?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debts_original_transaction_id_fkey"
+            columns: ["original_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entries: {
         Row: {
           account_id: string | null
@@ -66,6 +119,7 @@ export type Database = {
           id: string
           is_shared: boolean
           kind: string
+          my_share: number | null
           note: string | null
           shared_reference: string | null
           source: string
@@ -85,6 +139,7 @@ export type Database = {
           id?: string
           is_shared?: boolean
           kind: string
+          my_share?: number | null
           note?: string | null
           shared_reference?: string | null
           source?: string
@@ -104,6 +159,7 @@ export type Database = {
           id?: string
           is_shared?: boolean
           kind?: string
+          my_share?: number | null
           note?: string | null
           shared_reference?: string | null
           source?: string
