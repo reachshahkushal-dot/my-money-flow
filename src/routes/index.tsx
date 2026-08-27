@@ -261,13 +261,32 @@ function Dashboard() {
                           day: "numeric",
                           month: "short",
                         })}
+                        {e.description ? ` · ${e.description}` : ""}
                         {e.note ? ` · ${e.note}` : ""}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground/70">
+                        {[
+                          KIND_LABELS[e.kind],
+                          e.account_id ? accountName[e.account_id] : null,
+                          SOURCE_LABELS[e.source] ?? e.source,
+                          STATUS_LABELS[e.status] ?? e.status,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                     <span className="text-sm font-semibold tabular-nums">
                       {e.kind === "income" ? "+" : "−"}
                       {formatSGD(Number(e.amount)).replace("SGD", "").trim()}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Edit entry"
+                      onClick={() => setEditing(e)}
+                    >
+                      <Pencil className="size-4 text-muted-foreground" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
