@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, Plus, LogOut } from "lucide-react";
+import { Trash2, Plus, LogOut, Pencil, Wallet } from "lucide-react";
+import { AccountsDialog } from "@/components/AccountsDialog";
+import { EditEntryDialog } from "@/components/EditEntryDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
